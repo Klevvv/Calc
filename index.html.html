@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Позиция">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F1F3EF">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Размер позиции с комиссией</title>
+<style>
+  :root {
+    --paper: #F1F3EF;
+    --card: #FBFCFA;
+    --ink: #16222A;
+    --muted: #5B6B73;
+    --line: #CBD3D0;
+    --deep: #12343B;
+    --deep-soft: #A9C2C2;
+    --long: #1F7A54;
+    --short: #B23A2E;
+    --warn: #7A4E00;
+    --warn-bg: #F6E9C8;
+    --focus: #2C5FD8;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-variant-numeric: tabular-nums;
+  }
+  main {
+    max-width: 480px; margin: 0 auto;
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom));
+  }
+  h1 { font-size: 22px; line-height: 1.2; margin: 4px 0 6px; font-weight: 700; }
+  .lede { margin: 0 0 18px; color: var(--muted); font-size: 15px; }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .field.wide { grid-column: 1 / -1; }
+  label, .label { font-size: 14px; color: var(--muted); }
+  input[type="text"] {
+    width: 100%;
+    font: inherit;
+    font-size: 18px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink);
+  }
+  input[type="text"]::placeholder { color: #9AA8AE; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+  .seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #fff; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label {
+    text-align: center; padding: 10px 8px; font-size: 16px; color: var(--ink); cursor: pointer;
+  }
+  .seg input:checked + label { background: var(--deep); color: #fff; }
+  .seg input:focus-visible + label { outline: 3px solid var(--focus); outline-offset: -3px; }
+
+  details { margin-top: 12px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 14px; padding: 4px 0; }
+  details .grid { margin-top: 8px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+
+  .result { background: var(--deep); color: var(--paper); border-radius: 10px; padding: 18px 16px; margin-bottom: 14px; }
+  .side { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+  .side.long { color: #7FD6AB; }
+  .side.short { color: #FFA79B; }
+  .big { font-size: 46px; line-height: 1.05; font-weight: 700; margin: 0; letter-spacing: -0.5px; }
+  .big small { font-size: 22px; font-weight: 500; margin-left: 4px; }
+  .qty { margin: 4px 0 14px; color: var(--deep-soft); font-size: 17px; }
+  dl { margin: 0; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid rgba(241,243,239,.16); font-size: 15px; }
+  .row dt { color: var(--deep-soft); }
+  .row dd { margin: 0; font-weight: 600; text-align: right; }
+  .empty { margin: 0; color: var(--deep-soft); font-size: 16px; }
+  .error { margin: 0; color: #FFD2A1; font-size: 16px; }
+
+  .notes { list-style: none; padding: 0; margin: 0 0 14px; display: grid; gap: 8px; }
+  .notes li { background: var(--warn-bg); color: var(--warn); border-left: 4px solid #C58A00; padding: 10px 12px; border-radius: 6px; font-size: 15px; }
+
+  h2 { font-size: 18px; margin: 0 0 4px; }
+  .checks { list-style: none; margin: 10px 0 0; padding: 0; }
+  .checks li { border-top: 1px solid var(--line); }
+  .checks label {
+    display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; color: var(--ink); font-size: 16px; cursor: pointer;
+  }
+  .checks input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; accent-color: var(--deep); }
+  .status { margin: 12px 0 0; font-weight: 600; font-size: 15px; }
+  .status.ok { color: var(--long); }
+  .status.no { color: var(--short); }
+  .after { margin: 12px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+  button {
+    font: inherit; font-size: 15px; padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line);
+    background: #fff; color: var(--ink); cursor: pointer; margin-top: 12px; margin-right: 8px;
+  }
+  button:active { background: #E6EAE6; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Размер позиции с комиссией</h1>
+  <p class="lede">Риск в долларах включает комиссию на вход и на выход. Убыток по стопу получится ровно таким, как ты задал.</p>
+
+  <section class="panel" aria-label="Параметры сделки">
+    <div class="grid">
+      <div class="field">
+        <label for="entry">Вход</label>
+        <input id="entry" type="text" inputmode="decimal" autocomplete="off" placeholder="75,00">
+      </div>
+      <div class="field">
+        <label for="stop">Стоп</label>
+        <input id="stop" type="text" inputmode="decimal" autocomplete="off" placeholder="74,25">
+      </div>
+      <div class="field">
+        <label for="take">Тейк (по желанию)</label>
+        <input id="take" type="text" inputmode="decimal" autocomplete="off" placeholder="79,50">
+      </div>
+      <div class="field">
+        <label for="risk">Риск на сделку, $</label>
+        <input id="risk" type="text" inputmode="decimal" autocomplete="off" value="1">
+      </div>
+      <div class="field wide">
+        <span class="label" id="entryTypeLabel">Как входишь</span>
+        <div class="seg" role="radiogroup" aria-labelledby="entryTypeLabel">
+          <input type="radio" name="etype" id="limit" value="limit" checked>
+          <label for="limit">Лимиткой</label>
+          <input type="radio" name="etype" id="market" value="market">
+          <label for="market">По рынку</label>
+        </div>
+      </div>
+    </div>
+
+    <details>
+      <summary>Монета, депозит, плечо, комиссии</summary>
+      <div class="grid">
+        <div class="field">
+          <label for="coin">Монета</label>
+          <input id="coin" type="text" autocomplete="off" placeholder="SOL">
+        </div>
+        <div class="field">
+          <label for="bal">Депозит, $</label>
+          <input id="bal" type="text" inputmode="decimal" autocomplete="off" placeholder="100">
+        </div>
+        <div class="field">
+          <label for="lev">Плечо</label>
+          <input id="lev" type="text" inputmode="decimal" autocomplete="off" value="10">
+        </div>
+        <div class="field"></div>
+        <div class="field">
+          <label for="taker">Комиссия по рынку, %</label>
+          <input id="taker" type="text" inputmode="decimal" autocomplete="off" value="0,10">
+        </div>
+        <div class="field">
+          <label for="maker">Комиссия лимиткой, %</label>
+          <input id="maker" type="text" inputmode="decimal" autocomplete="off" value="0,036">
+        </div>
+      </div>
+      <p class="hint">Комиссии взяты из твоих сделок в Bybit. Сверь со своим тарифом. Стоп и тейк считаются как рыночные ордера.</p>
+    </details>
+  </section>
+
+  <section class="result" aria-live="polite" id="result"></section>
+  <ul class="notes" id="notes" aria-live="polite"></ul>
+
+  <section class="panel" aria-labelledby="chk-title">
+    <h2 id="chk-title">Чеклист перед входом</h2>
+    <p class="hint" style="margin-top:0">Входишь, только когда отмечены все пункты.</p>
+    <ul class="checks" id="checks"></ul>
+    <p class="status no" id="status"></p>
+    <button type="button" id="resetChecks">Снять отметки</button>
+    <ul class="after">
+      <li>После входа стоп не двигаем ближе.</li>
+      <li>Закрываем раньше только если сломался уровень, записанный заранее.</li>
+      <li>В дневнике одна строка: чеклист соблюдён, да или нет.</li>
+    </ul>
+  </section>
+</main>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  function num(v) {
+    var n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.'));
+    return isFinite(n) ? n : NaN;
+  }
+  function fmt(n, d) {
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d });
+  }
+  function qtyFmt(q) {
+    if (q >= 1000) return fmt(q, 0);
+    if (q >= 1) return fmt(q, 2);
+    return fmt(q, 4);
+  }
+  function row(label, value) {
+    return '<div class="row"><dt>' + label + '</dt><dd>' + value + '</dd></div>';
+  }
+
+  var resultEl = $('result');
+  var notesEl = $('notes');
+
+  function calc() {
+    var E = num($('entry').value);
+    var S = num($('stop').value);
+    var T = num($('take').value);
+    var R = num($('risk').value);
+    var taker = num($('taker').value) / 100;
+    var maker = num($('maker').value) / 100;
+    var lev = num($('lev').value);
+    var bal = num($('bal').value);
+    var coin = $('coin').value.trim() || 'монет';
+    var isLimit = $('limit').checked;
+    var notes = [];
+
+    notesEl.innerHTML = '';
+
+    if (!(E > 0 && S > 0 && R > 0)) {
+      resultEl.innerHTML = '<p class="empty">Введи вход, стоп и риск. Размер позиции появится здесь.</p>';
+      return;
+    }
+    if (!(taker >= 0) || !(maker >= 0)) {
+      resultEl.innerHTML = '<p class="error">Проверь комиссии: нужны числа, например 0,10.</p>';
+      return;
+    }
+    if (E === S) {
+      resultEl.innerHTML = '<p class="error">Вход и стоп совпадают. Поставь стоп за уровнем.</p>';
+      return;
+    }
+
+    var side = S < E ? 'long' : 'short';
+    var stopPct = Math.abs(E - S) / E;
+    var feeIn = isLimit ? maker : taker;
+    var feePct = feeIn + taker;
+
+    var N = R / (stopPct + feePct);
+    var qty = N / E;
+    var fees = N * feePct;
+    var feeShare = feePct / (stopPct + feePct);
+
+    var html = '';
+    html += '<p class="side ' + side + '">' + (side === 'long' ? 'Лонг' : 'Шорт') + '</p>';
+    html += '<p class="big">' + fmt(N, 2) + '<small>$</small></p>';
+    html += '<p class="qty">' + qtyFmt(qty) + ' ' + coin + ', округли вниз до шага лота</p>';
+    html += '<dl>';
+    html += row('Стоп от входа', fmt(stopPct * 100, 2) + '%');
+    html += row('Комиссия вход + выход', fmt(fees, 2) + ' $ (' + fmt(feePct * 100, 3) + '%)');
+    html += row('Убыток по стопу вместе с комиссией', fmt(R, 2) + ' $');
+
+    if (lev > 0) {
+      var margin = N / lev;
+      html += row('Маржа при плече ' + fmt(lev, lev % 1 ? 1 : 0) + 'x', fmt(margin, 2) + ' $');
+      if (bal > 0 && margin > bal) {
+        notes.push('Маржа ' + fmt(margin, 2) + ' $ больше депозита. Подними плечо или возьми стоп шире.');
+      }
+    }
+    if (bal > 0) {
+      var riskPct = R / bal * 100;
+      html += row('Риск от депозита', fmt(riskPct, 1) + '%');
+      if (riskPct > 1) {
+        notes.push('Риск ' + fmt(riskPct, 1) + '% депозита. Твое правило: не больше 1% за сессию.');
+      }
+    }
+
+    var takeValid = false;
+    if (T > 0) {
+      var wrongSide = (side === 'long' && T <= E) || (side === 'short' && T >= E);
+      if (wrongSide) {
+        notes.push('Тейк стоит не с той стороны от входа. Для ' + (side === 'long' ? 'лонга он выше входа.' : 'шорта он ниже входа.'));
+      } else {
+        takeValid = true;
+        var takePct = Math.abs(T - E) / E;
+        var grossRR = takePct / stopPct;
+        var profit = N * takePct - fees;
+        var netR = profit / R;
+        html += row('Тейк от входа', fmt(takePct * 100, 2) + '%');
+        html += row('Тейк к стопу', fmt(grossRR, 1) + ' : 1');
+        html += row('Чистая прибыль на тейке', '+' + fmt(profit, 2) + ' $ (' + fmt(netR, 1) + ' R)');
+        if (netR < 3) {
+          notes.push('Чистая прибыль на тейке ' + fmt(netR, 1) + ' R, это меньше 3 R. При твоей доле побед такая сделка не окупается.');
+        }
+      }
+    }
+    html += '</dl>';
+    resultEl.innerHTML = html;
+
+    if (feeShare > 0.2) {
+      notes.unshift('Комиссия забирает ' + fmt(feeShare * 100, 0) + '% риска. Стоп шире или вход лимиткой уменьшат эту долю.');
+    }
+    if (!isLimit) {
+      notes.push('Вход по рынку стоит на ' + fmt((taker - maker) * 100, 3) + '% дороже лимитного.');
+    }
+
+    notesEl.innerHTML = notes.map(function (n) { return '<li>' + n + '</li>'; }).join('');
+  }
+
+  ['entry', 'stop', 'take', 'risk', 'coin', 'bal', 'lev', 'taker', 'maker'].forEach(function (id) {
+    $(id).addEventListener('input', calc);
+  });
+  $('limit').addEventListener('change', calc);
+  $('market').addEventListener('change', calc);
+
+  /* Чеклист */
+  var items = [
+    'Могу показать подтверждение манипуляции на графике и описать его своими словами',
+    'Направление совпадает со старшим трендом',
+    'Вход от конкретного уровня с одной крупной заявкой, объемы не скачут',
+    'Вход лимиткой, а не «немедля по рынку»',
+    'Стоп за уровнем и не ближе 1% от цены',
+    'Тейк минимум в 3 раза дальше стопа',
+    'Размер позиции посчитан здесь, риск вместе с комиссией',
+    'Монета ликвидная, фандинг проверен',
+    'Сегодня меньше двух сделок и нет серии стопов подряд'
+  ];
+  var list = $('checks');
+  items.forEach(function (text, i) {
+    var li = document.createElement('li');
+    var lab = document.createElement('label');
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.id = 'chk' + i;
+    cb.addEventListener('change', updateStatus);
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(text));
+    li.appendChild(lab);
+    list.appendChild(li);
+  });
+
+  function updateStatus() {
+    var boxes = list.querySelectorAll('input[type="checkbox"]');
+    var done = 0;
+    boxes.forEach(function (b) { if (b.checked) done++; });
+    var st = $('status');
+    if (done === boxes.length) {
+      st.className = 'status ok';
+      st.textContent = 'Отмечено ' + done + ' из ' + boxes.length + '. Можно входить.';
+    } else {
+      st.className = 'status no';
+      st.textContent = 'Отмечено ' + done + ' из ' + boxes.length + '. Не входи, пока не отмечены все.';
+    }
+  }
+  $('resetChecks').addEventListener('click', function () {
+    list.querySelectorAll('input[type="checkbox"]').forEach(function (b) { b.checked = false; });
+    updateStatus();
+  });
+
+  calc();
+  updateStatus();
+})();
+</script>
+</body>
+</html>
